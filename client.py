@@ -1,5 +1,10 @@
 import socket
-import my_google
+import functions
+
+BUFFER_SIZE = 8192
+
+def show_options():
+    print(f"1-Search\n2-Insert\n3-Remove\n4-Show All")
 
 def run_client():
     # create a socket object
@@ -10,29 +15,28 @@ def run_client():
     # establish connection with server
     client.connect((server_ip, server_port))
 
-    my_google.show_options()
+    show_options()
 
     try:
         while True:
             msg = input("Input: ")
-            client.send(msg.encode("utf-8")[:1024])
+            client.send(msg.encode("utf-8")[:BUFFER_SIZE])
 
-            response = client.recv(1024)
+            response = client.recv(BUFFER_SIZE)
             response = response.decode("utf-8")
 
             if response.lower() == "closed":
                 break
 
-            print(f"Received:\n{response}")
-            if "Task completed!" in response:
-                input("Press enter to continue")
-                my_google.show_options()
+            print(f"{response}")
+            if "task completed!" in response.lower():
+                input("Press enter to continue\n")
+                show_options()
     except Exception as e:
         print(f"Error: {e}")
     finally:
         # close client socket (connection to the server)
         client.close()
         print("Connection to server closed")
-
 
 run_client()

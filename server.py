@@ -1,46 +1,56 @@
 import socket
 import threading
-import my_google
+import functions
+
+BUFFER_SIZE = 8192
 
 def handle_request(client_socket, request):
-    data_list = my_google.load_data()
-    index_size = len(data_list)
+    my_google = functions.DataManager(data_path='dataset/sample_dataset.json')
+    my_google.load_data()
 
     if request.lower() == "search":
         client_socket.send("Enter the search string!".encode("utf-8"))
-
         while True:
-            search_string = client_socket.recv(1024).decode("utf-8")
-            # Return an index list that has the position of each founded item.
-            index_list = my_google.search(search_string, data_list)
-
+            search_string = client_socket.recv(BUFFER_SIZE).decode("utf-8")
+            # retorna uma lista contendo os indices dos arquivos encontrados
+            index_list = my_google.search(search_string)
             if index_list:
-                composed_string = ""
-                # Iterate through each index and construct the string that contains the answer.
-                for index in index_list:
-                    title = my_google.show(index, data_list)
-                    composed_string += title + "\n"
-                composed_string += "\nTask completed!"
-                client_socket.send(composed_string.encode("utf-8"))
+                # retorna o número de itens encontrados e a string contendo os títulos de todos
+                n, composed_string = my_google.show(index_list)
+                client_socket.send(f"Found a total of {n} items:\n{composed_string}\nEnter the index of the desired file!".encode("utf-8"))
+
+                index = client_socket.recv(BUFFER_SIZE).decode("utf-8")
+                # exibe o resultado do arquivo escolhido
+                search_results = my_google.show_instance(int(index))
+                client_socket.send(f"{search_results}\nTask completed!".encode("utf-8"))
                 break
             else:
-                client_socket.send("not founded, try again".encode("utf-8"))
+                client_socket.send("Not founded, try again".encode("utf-8"))
 
-    if request.lower() == "insert":
+    elif request.lower() == "insert":
         client_socket.send("Enter the path to the archive".encode("utf-8"))
-
         while True:
-            archive_path = client_socket.recv(1024).decode("utf-8")
-            if my_google.insert(archive_path, data_list, index_size):
-                index_size+=1
-                client_socket.send("file inserted".encode("utf-8"))
+            archive_path = client_socket.recv(BUFFER_SIZE).decode("utf-8")
+            if my_google.insert(archive_path):
+                client_socket.send("File inserted\nTask completed!".encode("utf-8"))
+                break
             else:
                 client_socket.send("ERROR: file not inserted, try again".encode("utf-8"))
 
+    elif request.lower() == "remove":
+        client_socket.send("Enter the index of the archive".encode("utf-8"))
+        while True:
+            index = client_socket.recv(BUFFER_SIZE).decode("utf-8")
+            if my_google.remove(int(index)):
+                client_socket.send(f"File removed\nTask completed!".encode("utf-8"))
+                break
+            else:
+                client_socket.send(f"ERROR: File not removed, try again".encode("utf-8"))
 
-    if request.lower() == "remove":
-        pass
-
+    elif request.lower() == "show all":
+        size, composed_string = my_google.show_all()
+        client_socket.send(f"Found a total of {size} items:\n{composed_string}\nTask completed!".encode("utf-8"))
+        
     else:
         response = "Didn't find any option!"
         client_socket.send(response.encode("utf-8"))
@@ -48,7 +58,7 @@ def handle_request(client_socket, request):
 def handle_client(client_socket, addr):
     try:
         while True:
-            request = client_socket.recv(1024).decode("utf-8")
+            request = client_socket.recv(BUFFER_SIZE).decode("utf-8")
             if request.lower() == "close":
                 client_socket.send("closed".encode("utf-8"))
                 break
@@ -61,22 +71,17 @@ def handle_client(client_socket, addr):
         print(f"Connection to client ({addr[0]}:{addr[1]}) closed")
 
 def run_server():
-    server_ip = "127.0.0.1"  # server hostname or IP address
-    port = 8000  # server port number
-    # create apy socket object
+    server_ip = "127.0.0.1"  
+    port = 8000  
     try:
         server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        # bind the socket to the host and port
         server.bind((server_ip, port))
-        # listen for incoming connections
         server.listen()
         print(f"Listening on {server_ip}:{port}")
 
         while True:
-            # accept a client connection
             client_socket, addr = server.accept()
             print(f"Accepted connection from {addr[0]}:{addr[1]}")
-            # start a new thread to handle the client
             thread = threading.Thread(target=handle_client, args=(client_socket, addr,))
             thread.start()
     except Exception as e:
