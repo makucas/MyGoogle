@@ -8,7 +8,7 @@ def handle_request(client_socket, request):
     my_google = functions.DataManager(data_path='dataset/sample_dataset.json')
     my_google.load_data()
 
-    if request.lower() == "search":
+    if request.lower() == "search" or request == "1":
         client_socket.send("Enter the search string!".encode("utf-8"))
         while True:
             search_string = client_socket.recv(BUFFER_SIZE).decode("utf-8")
@@ -19,47 +19,46 @@ def handle_request(client_socket, request):
                 n, composed_string = my_google.show(index_list)
                 client_socket.send(f"Found a total of {n} items:\n{composed_string}\nEnter the index of the desired file!".encode("utf-8"))
 
-                index = client_socket.recv(BUFFER_SIZE).decode("utf-8")
                 # exibe o resultado do arquivo escolhido
+                index = client_socket.recv(BUFFER_SIZE).decode("utf-8")
                 search_results = my_google.show_instance(int(index))
                 client_socket.send(f"{search_results}\nTask completed!".encode("utf-8"))
                 break
             else:
                 client_socket.send("Not founded, try again".encode("utf-8"))
 
-    elif request.lower() == "insert":
+    elif request.lower() == "insert" or request == "2":
         client_socket.send("Enter the path to the archive".encode("utf-8"))
         while True:
             archive_path = client_socket.recv(BUFFER_SIZE).decode("utf-8")
             if my_google.insert(archive_path):
-                client_socket.send("File inserted\nTask completed!".encode("utf-8"))
+                client_socket.send("File inserted, task completed!".encode("utf-8"))
                 break
             else:
                 client_socket.send("ERROR: file not inserted, try again".encode("utf-8"))
 
-    elif request.lower() == "remove":
+    elif request.lower() == "remove" or request == "3":
         client_socket.send("Enter the index of the archive".encode("utf-8"))
         while True:
             index = client_socket.recv(BUFFER_SIZE).decode("utf-8")
             if my_google.remove(int(index)):
-                client_socket.send(f"File removed\nTask completed!".encode("utf-8"))
+                client_socket.send(f"File removed, task completed!".encode("utf-8"))
                 break
             else:
                 client_socket.send(f"ERROR: File not removed, try again".encode("utf-8"))
 
-    elif request.lower() == "show all":
+    elif request.lower() == "show all" or request == "4":
         size, composed_string = my_google.show_all()
         client_socket.send(f"Found a total of {size} items:\n{composed_string}\nTask completed!".encode("utf-8"))
         
     else:
-        response = "Didn't find any option!"
-        client_socket.send(response.encode("utf-8"))
+        client_socket.send(f"Please, chose a available option.".encode("utf-8"))
 
 def handle_client(client_socket, addr):
     try:
         while True:
             request = client_socket.recv(BUFFER_SIZE).decode("utf-8")
-            if request.lower() == "close":
+            if request.lower() == "close" or request == "5":
                 client_socket.send("closed".encode("utf-8"))
                 break
             handle_request(client_socket, request)

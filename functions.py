@@ -38,7 +38,8 @@ class DataManager:
     def search(self, search_string):
         index_list = []
         for i, data in enumerate(self.data):
-            if search_string.lower() in data["title"].lower():
+            analysed_text = f"{data['title'].lower()} {data['text'].lower()}".split()
+            if search_string.lower() in analysed_text:
                 index_list.append(i)
         return index_list
 
