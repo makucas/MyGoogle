@@ -8,7 +8,19 @@ def handle_request(client_socket, request):
     my_google = functions.DataManager(data_path='dataset/sample_dataset.json')
     my_google.load_data()
 
-    if request.lower() == "search" or request == "1":
+    if request.lower() == "testing":
+        client_socket.send("accepted".encode("utf-8"))
+        while True:
+            search_string = client_socket.recv(BUFFER_SIZE).decode("utf-8")
+            index_list = my_google.search(search_string)
+            if index_list:
+                n, _ = my_google.show(index_list)
+                client_socket.send(f"founded a total of {n} items.".encode("utf-8"))
+                break
+            else:
+                client_socket.send("Not founded, try again".encode("utf-8"))
+
+    elif request.lower() == "search" or request == "1":
         client_socket.send("Enter the search string!".encode("utf-8"))
         while True:
             search_string = client_socket.recv(BUFFER_SIZE).decode("utf-8")
